@@ -31,5 +31,6 @@ def main():
     # mailer.send_mail(mail_sender, mail_recipients, mail_subject, mail_attachments)
     mailer.accept_mail()
 
+
 if __name__ == '__main__':
     main()
