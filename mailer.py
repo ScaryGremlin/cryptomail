@@ -63,5 +63,5 @@ class Mailer:
         response, data = imap_connect.list()
         print(response, data)
         imap_connect.select("INBOX")
-        status, response = imap_connect.search(None, 'ALL')
+        status, response = imap_connect.search(None, 'UNSEEN')
         print(status, response)
