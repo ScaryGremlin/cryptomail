@@ -1,3 +1,4 @@
+import imaplib
 import mimetypes
 import smtplib
 from email.message import EmailMessage
@@ -39,15 +40,22 @@ class Mailer:
             email_message.add_attachment(attached_file.read(), maintype=maintype, subtype=subtype, filename=attachment)
 
         mail_credentials = self.__credentials.get_credentials()
-        mail_server = mail_credentials.get("server")
-        mail_port = mail_credentials.get("port")
-        mail_login = mail_credentials.get("login")
-        mail_password = mail_credentials.get("password")
-        with smtplib.SMTP_SSL(mail_server, mail_port) as smtp_server:
-            smtp_server.login(mail_login, mail_password)
-            smtp_server.send_message(email_message)
+        smtp_server = mail_credentials.get("server")
+        smtp_port = mail_credentials.get("port")
+        smtp_login = mail_credentials.get("login")
+        smtp_password = mail_credentials.get("password")
+        with smtplib.SMTP_SSL(smtp_server, smtp_port) as smtp_connect:
+            smtp_connect.login(smtp_login, smtp_password)
+            smtp_connect.send_message(email_message)
 
     def accept_mail(self):
-        pass
-
+        mail_credentials = self.__credentials.get_credentials()
+        imap_server = mail_credentials.get("server")
+        imap_port = mail_credentials.get("port")
+        imap_login = mail_credentials.get("login")
+        imap_password = mail_credentials.get("password")
+        imap_connect = imaplib.IMAP4_SSL(imap_server, imap_port)
+        imap_connect.login(imap_login, imap_password)
+        response, data = imap_connect.list()
+        print(response, data)
 
