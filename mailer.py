@@ -40,8 +40,8 @@ class Mailer:
             email_message.add_attachment(attached_file.read(), maintype=maintype, subtype=subtype, filename=attachment)
 
         mail_credentials = self.__credentials.get_credentials()
-        smtp_server = mail_credentials.get("server")
-        smtp_port = mail_credentials.get("port")
+        smtp_server = mail_credentials.get("smtp").get("server")
+        smtp_port = mail_credentials.get("smtp").get("port")
         smtp_login = mail_credentials.get("login")
         smtp_password = mail_credentials.get("password")
         with smtplib.SMTP_SSL(smtp_server, smtp_port) as smtp_connect:
@@ -49,13 +49,19 @@ class Mailer:
             smtp_connect.send_message(email_message)
 
     def accept_mail(self):
+        """
+
+        :return:
+        """
         mail_credentials = self.__credentials.get_credentials()
-        imap_server = mail_credentials.get("server")
-        imap_port = mail_credentials.get("port")
+        imap_server = mail_credentials.get("imap").get("server")
+        imap_port = mail_credentials.get("imap").get("port")
         imap_login = mail_credentials.get("login")
         imap_password = mail_credentials.get("password")
         imap_connect = imaplib.IMAP4_SSL(imap_server, imap_port)
         imap_connect.login(imap_login, imap_password)
         response, data = imap_connect.list()
         print(response, data)
-
+        imap_connect.select("INBOX")
+        status, response = imap_connect.search(None, 'ALL')
+        print(status, response)
