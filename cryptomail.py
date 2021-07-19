@@ -1,9 +1,7 @@
+from config import CONFIG_FILE
+from config import Config
 from credentials import Credentials
 from mailer import Mailer
-from config import Config
-from pathlib import Path
-
-CONFIG_FILE = Path("config.json")
 
 
 def main():
