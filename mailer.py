@@ -66,26 +66,28 @@ class Mailer:
             return name.decode("utf-8")
         return name
 
-    def __get_attachments(self, message: Message, subdir_accept_attachments: str):
+    def __get_attachments(self, message: Message, subdir: str):
         """
-        Получить файл вложения и сохранить его в директорию {directories: {accept_attachments} }
+        Получить файл вложения и сохранить его в в поддиректорию с датой
+        и временем получения вложения директорию {directories: {accept_attachments} }
+        :param message: Необработанное сообщение электронной почты
+        :param subdir: Поддиректория с именем "дата_время" для сохранения вложений одного письма
         """
-        dir_accept_attachments = self.__config.get("directories").get("accept_attachments")
+        dir_accept_attachments = Path(self.__config.get("directories").get("accept_attachments")) / Path(subdir)
+        if not dir_accept_attachments.exists():
+            dir_accept_attachments.mkdir()
         for part in message.walk():
             if part.get_content_maintype() == "multipart" or part.get("Content-Disposition") is None:
                 continue
             file_name = part.get_filename()
             if bool(file_name):
-                file_path = Path(dir_accept_attachments) / \
-                            Path(subdir_accept_attachments) / \
-                            Path(self.__decode_name(file_name))
+                file_path = dir_accept_attachments / Path(self.__decode_name(file_name))
                 with open(file_path, "wb") as attachment_file:
                     attachment_file.write(part.get_payload(decode=True))
 
     def accept_mail(self):
         """
         Сохранить вложения всех непрочитанных собщений в почтовом ящике
-        :return:
         """
         mail_credentials = self.__credentials.get_credentials()
         imap_server = mail_credentials.get("imap").get("server")
@@ -102,7 +104,7 @@ class Mailer:
                 response_fetch, message_data = imap_connection.uid("fetch", uid, "RFC822")
                 raw = email.message_from_bytes(message_data[0][1])
                 # Получить все вложения сообщения и сохранить
-                # в поддиректорию с датой и временем вызова данного метода
+                # в поддиректорию с датой и временем получения вложений
                 # в директории {directories: {accept_attachments} }
-                subdir_accept_attachments = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+                subdir_accept_attachments = datetime.now().strftime("%Y-%m-%d_%H.%M.%S.%f")
                 self.__get_attachments(raw, subdir_accept_attachments)
