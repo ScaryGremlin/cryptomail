@@ -2,13 +2,12 @@ import email
 import imaplib
 import mimetypes
 import smtplib
-from email.parser import BytesParser
-from base64 import b64decode
+from datetime import datetime
+from email.header import decode_header
 from email.message import EmailMessage
 from email.message import Message
-from email.header import decode_header
 from pathlib import Path
-
+from typing import Union
 
 from config import CONFIG_FILE
 from config import Config
@@ -25,6 +24,7 @@ class Mailer:
         :param credentials: Реквизиты для входа
         """
         self.__credentials = credentials
+        # CONFIG_FILE - путь к файлу конфигурации
         self.__config = Config(CONFIG_FILE).get_config()
 
     def send_mail(self, sender: str, recipients: list, subject: str, attachment: str):
@@ -55,7 +55,18 @@ class Mailer:
             smtp_connection.login(smtp_login, smtp_password)
             smtp_connection.send_message(email_message)
 
-    def __get_attachments(self, message: Message):
+    def __decode_name(self, string: str) -> Union[str, bytes]:
+        """
+        Преобразует имя из base64 в utf-8
+        :param string: Текст, который необходимо преодразовать
+        :return: Преобразованный в utf-8 текст
+        """
+        name = decode_header(string)[0][0]
+        if isinstance(name, bytes):
+            return name.decode("utf-8")
+        return name
+
+    def __get_attachments(self, message: Message, subdir_accept_attachments: str):
         """
         Получить файл вложения и сохранить его в директорию {directories: {accept_attachments} }
         """
@@ -64,9 +75,10 @@ class Mailer:
             if part.get_content_maintype() == "multipart" or part.get("Content-Disposition") is None:
                 continue
             file_name = part.get_filename()
-            print(type(file_name), file_name)
             if bool(file_name):
-                file_path = Path(dir_accept_attachments) / Path(file_name)
+                file_path = Path(dir_accept_attachments) / \
+                            Path(subdir_accept_attachments) / \
+                            Path(self.__decode_name(file_name))
                 with open(file_path, "wb") as attachment_file:
                     attachment_file.write(part.get_payload(decode=True))
 
@@ -84,15 +96,13 @@ class Mailer:
         with imaplib.IMAP4_SSL(imap_server, imap_port) as imap_connection:
             imap_connection.login(imap_login, imap_password)
             imap_connection.select("INBOX", readonly=True)
-            # Получить все сообщения с пометкой "не прочитано"
+            # Получить все не прочитаные сообщения"
             response_search, all_uids_unseen_messages = imap_connection.uid("search", "SEEN")
             for uid in all_uids_unseen_messages[0].split():
                 response_fetch, message_data = imap_connection.uid("fetch", uid, "RFC822")
-                msg = message_data[0][1].decode("utf-8")
-                # msg = BytesParser().parsebytes(message_data[0][1])
-                #print(msg)
-                print(msg)
-
-                # raw = email.message_from_bytes(message_data[0][1])
-                # raw = email.message_from_bytes(msg)
-                # self.__get_attachments(raw)
+                raw = email.message_from_bytes(message_data[0][1])
+                # Получить все вложения сообщения и сохранить
+                # в поддиректорию с датой и временем вызова данного метода
+                # в директории {directories: {accept_attachments} }
+                subdir_accept_attachments = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+                self.__get_attachments(raw, subdir_accept_attachments)
